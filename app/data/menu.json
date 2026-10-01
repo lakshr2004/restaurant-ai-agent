@@ -1,0 +1,76 @@
+{
+  "items": [
+    {
+      "id": "burger_001",
+      "name": "Classic Veg Burger",
+      "category": "burger",
+      "description": "Crispy veg patty with lettuce, tomato, onion and house sauce.",
+      "price": 149,
+      "vegetarian": true,
+      "available": true
+    },
+    {
+      "id": "burger_002",
+      "name": "Cheese Veg Burger",
+      "category": "burger",
+      "description": "Crispy veg patty with cheese, lettuce, tomato and house sauce.",
+      "price": 179,
+      "vegetarian": true,
+      "available": true
+    },
+    {
+      "id": "burger_003",
+      "name": "Paneer Burger",
+      "category": "burger",
+      "description": "Grilled paneer patty with lettuce, onion and spicy mayo.",
+      "price": 199,
+      "vegetarian": true,
+      "available": true
+    },
+    {
+      "id": "pizza_001",
+      "name": "Margherita Pizza",
+      "category": "pizza",
+      "description": "Classic pizza with tomato sauce and mozzarella cheese.",
+      "price": 249,
+      "vegetarian": true,
+      "available": true
+    },
+    {
+      "id": "pizza_002",
+      "name": "Farmhouse Pizza",
+      "category": "pizza",
+      "description": "Pizza topped with onion, capsicum, tomato and mozzarella.",
+      "price": 299,
+      "vegetarian": true,
+      "available": true
+    },
+    {
+      "id": "pasta_001",
+      "name": "White Sauce Pasta",
+      "category": "pasta",
+      "description": "Creamy pasta with herbs and vegetables.",
+      "price": 229,
+      "vegetarian": true,
+      "available": true
+    },
+    {
+      "id": "fries_001",
+      "name": "Classic French Fries",
+      "category": "sides",
+      "description": "Crispy golden French fries.",
+      "price": 99,
+      "vegetarian": true,
+      "available": true
+    },
+    {
+      "id": "drink_001",
+      "name": "Cold Coffee",
+      "category": "beverages",
+      "description": "Chilled creamy cold coffee.",
+      "price": 129,
+      "vegetarian": true,
+      "available": true
+    }
+  ]
+}

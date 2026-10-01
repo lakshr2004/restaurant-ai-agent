@@ -1,96 +1,117 @@
 # Restaurant AI Agent
 
-A backend-focused conversational restaurant agent built with Python, LangGraph, Groq, and MongoDB. The project is intentionally designed around a disciplined architecture: the LLM handles natural-language understanding, while Python enforces canonical menu matching, pricing, availability, validation, confirmation logic, and persistence decisions.
+A backend-focused conversational restaurant agent built with Python, LangGraph, Groq, and MongoDB. The project is designed around a simple but important principle: the LLM handles natural-language understanding, while deterministic Python logic remains responsible for validation, pricing, availability, confirmation gates, and order persistence.
 
-## Engineering Story
+## Highlights
 
-This project is a strong example of a stateful AI workflow where the model does not directly control business-critical behavior.
+- Stateful conversational ordering
+- LangGraph workflow orchestration
+- Groq-powered language understanding
+- Multi-item order extraction and validation
+- Canonical menu-based pricing and availability checks
+- Confirmation-before-persistence flow
+- MongoDB-backed order lifecycle
+- Status and cancellation workflows
+- Defensively handled malformed LLM output
+- 46 deterministic regression tests
+- GitHub Actions CI
 
-User
-↓
-Natural language request
-↓
-LangGraph
-↓
-Intent / extraction
-↓
-Python validation
-↓
-Canonical menu data
-↓
-Confirmation gate
-↓
-MongoDB persistence
-↓
-Status / cancellation
+## Problem
 
-The LLM interprets the request, but Python owns the operational rules that matter:
-
-- menu validation
-- item IDs and names
-- prices and totals
-- availability checks
-- quantity validation
-- confirmation-before-persistence logic
-- order lookup, status resolution, and cancellation decisions
-- safe error handling and database safety
-
-This is one of the central engineering strengths of the project: the AI layer handles language, while the Python layer maintains correctness and safety.
-
-## GitHub Showcase Flow
-
-The attached terminal screenshots are the source material for the public GitHub showcase. They should be copied into an `assets/` directory before publishing to GitHub. The recommended files are:
-
-- `assets/order-staging.png`
-- `assets/order-confirmation.png`
-- `assets/order-status.png`
-- `assets/order-cancellation.png`
-- `assets/tests-passing.png`
-- `assets/validation.png`
-
-These screenshots should appear in the following order in the repository README:
-
-1. Multi-item ordering summary with the total before persistence
-2. Confirmation flow after the customer says `yes`
-3. Order status lookup and cancellation prompt
-4. Final cancelled state after confirmation
-5. Automated validation with the 46-test suite and compile / pip verification
+Restaurant ordering conversations are easy for an LLM to misunderstand if the system blindly trusts extracted item names, quantities, or prices. This project addresses that by separating language understanding from business logic: the LLM can interpret intent, but Python validates the requested items against canonical menu data before anything is staged or persisted.
 
 ## Demo
 
 ### 1. Natural-language multi-item ordering
 
-The agent turns a natural-language request into a structured order summary using canonical menu data instead of trusting raw LLM output.
+![Natural-language multi-item ordering](assets/Screenshot%202026-10-01%20142855.png)
 
-- Example request: `I want 2 Cheese Veg Burgers and 1 Classic French Fries`
-- The system resolves the correct menu entries, quantity values, and prices.
-- The total is calculated in Python and presented before any database write.
+The agent converts a natural-language request into a structured multi-item order, validates the request against canonical menu data, calculates the total, and asks for confirmation before persistence.
 
 ### 2. Confirmation before persistence
 
-Orders remain staged until the customer explicitly confirms them. This prevents accidental writes and keeps the order lifecycle deterministic.
+![Order confirmation before persistence](assets/Screenshot%202026-10-01%20142954.png)
 
-- `yes` triggers persistence
-- `no` discards the staged order
-- the persisted order includes a MongoDB-backed order ID and final total
+The staged order is only written to MongoDB after the user explicitly confirms it. A `no` response discards the staged order instead of mutating the database.
 
-### 3. Status and cancellation workflow
+### 3. Status and cancellation confirmation
 
-The agent carries the active order state across turns and resolves the correct order or previous order ID before showing status or cancellation workflows.
+![Order status and cancellation prompt](assets/Screenshot%202026-10-01%20143057.png)
 
-- status checks display the stored items and total
-- cancellation begins with a confirmation gate
-- `yes` cancels; `no` leaves the order unchanged
+The agent resolves the active order, displays the current status and items, and then asks for explicit confirmation before cancelling it.
 
 ### 4. Final cancelled state
 
-The final state is persisted and verified through MongoDB, giving a clear end-to-end lifecycle from request to confirmation to cancellation.
+![Cancelled order state](assets/Screenshot%202026-10-01%20143154.png)
+
+After confirmation, the order is updated to a cancelled state and the final status is retrieved and displayed again for verification.
 
 ### 5. Automated validation
 
-The project includes deterministic regression coverage for order creation, menu validation, cancel flows, modification constraints, failure handling, and MongoDB safety behavior.
+![Automated validation results](assets/Screenshot%202026-10-01%20143303.png)
 
-The validation suite demonstrates the engineering discipline behind the agent and is a strong GitHub showcase signal.
+The project includes a deterministic regression suite covering order creation, cancellation, validation failures, MongoDB safety, and state handling. The automated checks also validate syntax and dependency health.
+
+## Architecture
+
+```mermaid
+flowchart TD
+    A[Customer] --> B[CLI]
+    B --> C[run_agent]
+    C --> D{Confirmation pending?}
+    D -- Yes --> E[Order or cancellation confirmation handler]
+    D -- No --> F[LangGraph]
+
+    F --> G[Scope Guard]
+    G --> H{In restaurant scope?}
+    H -- No --> I[Out-of-Scope Node]
+    H -- Yes --> J[Intent Router]
+
+    J --> K[Menu Node]
+    J --> L[Order Node]
+    J --> M[Order Status Node]
+    J --> N[Order Modify Node]
+    J --> O[Order Cancel Node]
+    J --> P[Restaurant Info Node]
+
+    K --> Q[Menu Tool]
+    L --> Q
+    N --> Q
+    Q --> R[Canonical menu.json]
+
+    L --> S[Order Tools]
+    M --> S
+    N --> S
+    O --> S
+    S --> T[(MongoDB)]
+
+    G -. classification .-> U[Groq via LangChain Groq]
+    J -. classification .-> U
+    K -. extraction and response .-> U
+    L -. item and quantity extraction .-> U
+    N -. item and quantity extraction .-> U
+    P -. response generation .-> U
+
+    I --> V[Response]
+    E --> V
+    K --> V
+    L --> V
+    M --> V
+    N --> V
+    O --> V
+    P --> V
+    V --> B
+```
+
+### Major Layers
+
+- **CLI and `run_agent()`:** accepts customer messages, carries the conversation state across turns, dispatches pending confirmations, and converts service failures into safe responses.
+- **LangGraph:** routes requests through the scope guard and intent router before dispatching to the right node.
+- **Graph nodes:** use the LLM for intent classification and response generation, while Python remains responsible for validation, totals, and order-ID handling.
+- **Tools and data:** `menu.py` reads and validates `menu.json`; `orders.py` owns MongoDB order operations. Restaurant facts come from `restaurant_info.py`.
+- **State:** tracks the current request, scope, intent, staged order, active order ID, confirmation flags, and final response.
+
+This separation is a core design strength: the LLM interprets language, while Python enforces business rules.
 
 ## Key Features
 

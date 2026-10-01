@@ -1,6 +1,96 @@
 # Restaurant AI Agent
 
-A command-line conversational restaurant agent built with LangGraph, Groq through LangChain Groq, and MongoDB. It routes restaurant requests to focused nodes, uses canonical menu data for validation and pricing, and persists an order only after the customer confirms it.
+A backend-focused conversational restaurant agent built with Python, LangGraph, Groq, and MongoDB. The project is intentionally designed around a disciplined architecture: the LLM handles natural-language understanding, while Python enforces canonical menu matching, pricing, availability, validation, confirmation logic, and persistence decisions.
+
+## Engineering Story
+
+This project is a strong example of a stateful AI workflow where the model does not directly control business-critical behavior.
+
+User
+↓
+Natural language request
+↓
+LangGraph
+↓
+Intent / extraction
+↓
+Python validation
+↓
+Canonical menu data
+↓
+Confirmation gate
+↓
+MongoDB persistence
+↓
+Status / cancellation
+
+The LLM interprets the request, but Python owns the operational rules that matter:
+
+- menu validation
+- item IDs and names
+- prices and totals
+- availability checks
+- quantity validation
+- confirmation-before-persistence logic
+- order lookup, status resolution, and cancellation decisions
+- safe error handling and database safety
+
+This is one of the central engineering strengths of the project: the AI layer handles language, while the Python layer maintains correctness and safety.
+
+## GitHub Showcase Flow
+
+The attached terminal screenshots are the source material for the public GitHub showcase. They should be copied into an `assets/` directory before publishing to GitHub. The recommended files are:
+
+- `assets/order-staging.png`
+- `assets/order-confirmation.png`
+- `assets/order-status.png`
+- `assets/order-cancellation.png`
+- `assets/tests-passing.png`
+- `assets/validation.png`
+
+These screenshots should appear in the following order in the repository README:
+
+1. Multi-item ordering summary with the total before persistence
+2. Confirmation flow after the customer says `yes`
+3. Order status lookup and cancellation prompt
+4. Final cancelled state after confirmation
+5. Automated validation with the 46-test suite and compile / pip verification
+
+## Demo
+
+### 1. Natural-language multi-item ordering
+
+The agent turns a natural-language request into a structured order summary using canonical menu data instead of trusting raw LLM output.
+
+- Example request: `I want 2 Cheese Veg Burgers and 1 Classic French Fries`
+- The system resolves the correct menu entries, quantity values, and prices.
+- The total is calculated in Python and presented before any database write.
+
+### 2. Confirmation before persistence
+
+Orders remain staged until the customer explicitly confirms them. This prevents accidental writes and keeps the order lifecycle deterministic.
+
+- `yes` triggers persistence
+- `no` discards the staged order
+- the persisted order includes a MongoDB-backed order ID and final total
+
+### 3. Status and cancellation workflow
+
+The agent carries the active order state across turns and resolves the correct order or previous order ID before showing status or cancellation workflows.
+
+- status checks display the stored items and total
+- cancellation begins with a confirmation gate
+- `yes` cancels; `no` leaves the order unchanged
+
+### 4. Final cancelled state
+
+The final state is persisted and verified through MongoDB, giving a clear end-to-end lifecycle from request to confirmation to cancellation.
+
+### 5. Automated validation
+
+The project includes deterministic regression coverage for order creation, menu validation, cancel flows, modification constraints, failure handling, and MongoDB safety behavior.
+
+The validation suite demonstrates the engineering discipline behind the agent and is a strong GitHub showcase signal.
 
 ## Key Features
 
@@ -102,7 +192,7 @@ The agent resolves the names, item IDs, availability, and prices from `menu.json
 
 ## Modification and Cancellation
 
-- **Modification:** the current flow extracts one replacement item and quantity, validates it against the canonical menu, recalculates the total in Python, and updates a pending order. This operation is immediate; multi-item modification is not implemented.
+- **Modification:** Single-item modification is currently supported; multi-item modification is not implemented. The current flow extracts one replacement item and quantity, validates it against the canonical menu, recalculates the total in Python, and updates a pending order.
 - **Cancellation:** the agent first asks for confirmation. `no` leaves the order unchanged; `yes` changes the pending order's status to `cancelled`.
 - **Status:** the agent resolves an explicit MongoDB ObjectId from the message or falls back to the latest order ID in conversation state. Stored order items and total are displayed.
 
@@ -139,6 +229,10 @@ MONGODB_DATABASE
 ```
 
 Do not commit `.env`. It is ignored by Git. The application loads these values locally through `python-dotenv`.
+
+## Security Considerations
+
+This project intentionally avoids storing credentials in the repository. The local `.env` file is never committed, and the Git ignore configuration prevents secrets from being tracked. The README and demo screenshots should avoid exposing any connection strings, tokens, API keys, or personal data. Only non-sensitive, de-identified order IDs should be shown when illustrating the MongoDB-backed lifecycle.
 
 ## Installation
 

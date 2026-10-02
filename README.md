@@ -132,65 +132,6 @@ This separation is a core design strength: the LLM interprets language, while Py
 - 46 deterministic `unittest` regression tests
 - GitHub Actions CI on pushes and pull requests
 
-## Architecture
-
-```mermaid
-flowchart TD
-	A[Customer] --> B[CLI]
-	B --> C[run_agent]
-	C --> D{Confirmation pending?}
-	D -- Yes --> E[Order or cancellation confirmation handler]
-	D -- No --> F[LangGraph]
-
-	F --> G[Scope Guard]
-	G --> H{In restaurant scope?}
-	H -- No --> I[Out-of-Scope Node]
-	H -- Yes --> J[Intent Router]
-
-	J --> K[Menu Node]
-	J --> L[Order Node]
-	J --> M[Order Status Node]
-	J --> N[Order Modify Node]
-	J --> O[Order Cancel Node]
-	J --> P[Restaurant Info Node]
-
-	K --> Q[Menu Tool]
-	L --> Q
-	N --> Q
-	Q --> R[Canonical menu.json]
-
-	L --> S[Order Tools]
-	M --> S
-	N --> S
-	O --> S
-	S --> T[(MongoDB)]
-
-	G -. classification .-> U[Groq via LangChain Groq]
-	J -. classification .-> U
-	K -. extraction and response .-> U
-	L -. item and quantity extraction .-> U
-	N -. item and quantity extraction .-> U
-	P -. response generation .-> U
-
-	I --> V[Response]
-	E --> V
-	K --> V
-	L --> V
-	M --> V
-	N --> V
-	O --> V
-	P --> V
-	V --> B
-```
-
-### Major Layers
-
-- **CLI and `run_agent()`:** accepts customer messages, carries `RestaurantState` between turns, dispatches pending yes/no confirmations, and converts service failures into safe responses.
-- **LangGraph:** runs the scope guard and intent router, then routes each new request to its relevant node.
-- **Graph nodes:** use the LLM for language understanding and response generation, while keeping validation, totals, and order-ID resolution in Python.
-- **Tools and data:** `menu.py` reads and validates `menu.json`; `orders.py` owns MongoDB order operations. Restaurant facts come from `restaurant_info.py`.
-- **State:** retains the current message, scope, intent, staged order, most recent order ID, confirmation flags, and response.
-
 Pending order and cancellation confirmations are handled by `run_agent()` on the following turn. Order creation is not sent to MongoDB while it is only staged.
 
 ## Order Lifecycle
@@ -341,11 +282,7 @@ restaurant-ai-agent/
 │   │   ├── graph.py
 │   │   ├── nodes.py
 │   │   └── state.py
-│   ├── services/
-│   │   └── validation.py
 │   ├── tools/
-│   │   ├── billing.py
-│   │   ├── inventory.py
 │   │   ├── menu.py
 │   │   └── orders.py
 │   └── main.py
